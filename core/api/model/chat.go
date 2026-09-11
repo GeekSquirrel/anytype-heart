@@ -290,6 +290,26 @@ func chatReactionsFromProto(reactions *model.ChatMessageReactions) map[string][]
 	return result
 }
 
+// withTextBlock mirrors the flat message part into the canonical
+// block-composed representation desktop clients use, so API-originated
+// messages carry blocks like any other message. The flat part is kept for
+// readers of the legacy field.
+func withTextBlock(msg *model.ChatMessage) *model.ChatMessage {
+	if msg == nil || msg.Message == nil || len(msg.Blocks) > 0 {
+		return msg
+	}
+	msg.Blocks = []*model.ChatMessageMessageBlock{{
+		Content: &model.ChatMessageMessageBlockContentOfText{
+			Text: &model.ChatMessageMessageBlockText{
+				Text:  msg.Message.Text,
+				Style: msg.Message.Style,
+				Marks: msg.Message.Marks,
+			},
+		},
+	}}
+	return msg
+}
+
 func MessageContentToProto(req AddChatMessageRequest) *model.ChatMessage {
 	marks := make([]*model.BlockContentTextMark, 0, len(req.Marks))
 	for _, m := range req.Marks {
@@ -308,7 +328,7 @@ func MessageContentToProto(req AddChatMessageRequest) *model.ChatMessage {
 		})
 	}
 
-	return &model.ChatMessage{
+	return withTextBlock(&model.ChatMessage{
 		ReplyToMessageId: req.ReplyToMessageId,
 		Message: &model.ChatMessageMessageContent{
 			Text:  req.Text,
@@ -316,7 +336,7 @@ func MessageContentToProto(req AddChatMessageRequest) *model.ChatMessage {
 			Marks: marks,
 		},
 		Attachments: attachments,
-	}
+	})
 }
 
 func EditContentToProto(req EditChatMessageRequest) *model.ChatMessage {
@@ -337,14 +357,14 @@ func EditContentToProto(req EditChatMessageRequest) *model.ChatMessage {
 		})
 	}
 
-	return &model.ChatMessage{
+	return withTextBlock(&model.ChatMessage{
 		Message: &model.ChatMessageMessageContent{
 			Text:  req.Text,
 			Style: stringToTextStyle(req.Style),
 			Marks: marks,
 		},
 		Attachments: attachments,
-	}
+	})
 }
 
 func ChatMessageSearchResultFromProto(r *model.SearchMessageResult) ChatMessageSearchResult {

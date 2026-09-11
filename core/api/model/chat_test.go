@@ -5,6 +5,7 @@ import (
 
 	"github.com/anyproto/anytype-heart/pkg/lib/pb/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func textBlock(text string) *model.ChatMessageMessageBlock {
@@ -72,4 +73,23 @@ func TestChatMessageFromProto_NilMessage(t *testing.T) {
 	assert.NotNil(t, cm.Blocks)
 	assert.NotNil(t, cm.Attachments)
 	assert.NotNil(t, cm.Reactions)
+}
+
+func TestMessageContentToProto_SynthesizesTextBlock(t *testing.T) {
+	msg := MessageContentToProto(AddChatMessageRequest{Text: "from the api"})
+
+	assert.Equal(t, "from the api", msg.Message.Text)
+	require.Len(t, msg.Blocks, 1)
+	tb := msg.Blocks[0].GetText()
+	require.NotNil(t, tb)
+	assert.Equal(t, "from the api", tb.Text)
+}
+
+func TestEditContentToProto_SynthesizesTextBlock(t *testing.T) {
+	msg := EditContentToProto(EditChatMessageRequest{Text: "edited"})
+
+	assert.Equal(t, "edited", msg.Message.Text)
+	require.Len(t, msg.Blocks, 1)
+	require.NotNil(t, msg.Blocks[0].GetText())
+	assert.Equal(t, "edited", msg.Blocks[0].GetText().Text)
 }
